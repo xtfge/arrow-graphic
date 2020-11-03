@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.75/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.75/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <script type="module">
+      import HalfArrow from './source/components/HalfArrowComponent.js'
+      import Arrow from './source/components/ArrowComponent.js'
+      import HalfTrapezoidComponent from './source/components/TrapezoidComponent.js'
+      import StraightArrow from './source/arrow/StraightArrow.js'
+      import SplineComponent from './source/components/SplineComponent.js'
+      import AttackArrow from './source/arrow/AttackArrow.js'
+      import DoubleArrow from './source/arrow/DoubleArrow.js'
+      window.a1 = []
+      const controls = [
+        [117.29218382040519, 32.01069321603662],
+        [117.31084151056368, 31.999002128379473]
+      ]
+      // const ha = new Arrow({
+      //   controls
+      // });
+      // const ht = new HalfTrapezoidComponent({
+      //   controls
+      // })
+      const sa = new StraightArrow({
+        controls,
+        tail: true
+      })
+      const input = [
+        [117.29218382040519, 32.01069321603662],
+        [117.29340082917416, 32.00502008114123],
+        [117.29729726400492, 32.007624713529594],
+        [117.30141840104417, 32.0076984908569],
+        [117.30636362817499, 32.00533295607928],
+        [117.30845654499525, 32.002437137734105],
+        [117.30943488859235, 32.00053252757964],
+        [117.31084151056368, 31.999002128379473]
+      ]
+      const input1 = [
+        [117.29692033644973, 31.997635551290454],
+        [117.29621828676267, 31.99749024689566],
+        [117.29642195888029, 31.997072611738073],
+        [117.29699780352855, 31.997281748641626],
+        [117.29659207750065, 31.997526165278373]
+      ]
+      const aa = new AttackArrow({
+        controls: input,
+        tail: true
+      })
+      const da = new DoubleArrow({
+        controls: input1
+      })
+
+
+      const map = new Cesium.Viewer('map', {
+        animation: false,
+        timeline: false,
+        geocoder: false,
+        homeButton: false,
+        navigationHelpButton: false,
+        baseLayerPicker: false,
+        fullscreenElement: 'cesiumContainer',
+        fullscreenButton: false,
+        shouldAnimate: true,
+        infoBox: false,
+        selectionIndicator: false,
+        sceneModePicker: false,
+        shadows: false,
+        imageryProvider: new Cesium.UrlTemplateImageryProvider({
+          url: 'http://mt1.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}&s=Gali'
+        }),
+      })
+      const ets = []
+      let s = 0;
+
+      window.add = function(p, c = Cesium.Color.RED) {
+        s++;
+        ets.push(map.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(...p),
+          point: {
+            color: c,
+            pixelSize: 10
+          },
+          label: {
+            text: '' + s
+          }
+        }))
+      }
+
+      s = 0
+      for (let i of input1) {
+        add(i)
+      }
+      s = 0;
+      for (let j of a1) {
+        add(j, Cesium.Color.GOLD)
+      }
+      let e
+      e = map.entities.add({
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(da.polygon),
+          material: Cesium.Color.RED
+        }
+      })
+      e && ets.push(e)
+      // map.entities.add({
+      //   polyline: {
+      //     positions: Cesium.Cartesian3.fromDegreesArray(sa.polyline),
+      //     material: Cesium.Color.GOLD,
+      //     width: 5
+      //   }
+      // })
+      // ets.push(e)
+      // const e1 = map.entities.add({
+      //   polygon: {
+      //     hierarchy: Cesium.Cartesian3.fromDegreesArray(sa._bodyP),
+      //     material: Cesium.Color.GREEN
+      //   }
+      // })
+      map.flyTo(ets)
+      const handler = new Cesium.ScreenSpaceEventHandler(map.canvas);
+
+      function addPolygon(p) {
+        map.entities.add({
+          polygon: {
+            hierarchy: new Cesium.CallbackProperty(() => {
+              return new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(p.polygon))
+            }, false),
+            material: Cesium.Color.GOLD
+          }
+        })
+      }
+
+      function polyline(p) {
+        map.entities.add({
+          polyline: {
+            positions: new Cesium.CallbackProperty(() => {
+              return Cesium.Cartesian3.fromDegreesArray(p.polyline)
+            }, false),
+            material: Cesium.Color.RED
+          }
+        })
+      }
+      const arr = new DoubleArrow({})
+      addPolygon(arr)
+      window.arr = arr;
+      handler.setInputAction(e => {
+        const ray = map.camera.getPickRay(e.position);
+        const cartesian = map.scene.globe.pick(ray, viewer.scene);
+        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+        const lon = Cesium.Math.toDegrees(cartographic.longitude);
+        const lat = Cesium.Math.toDegrees(cartographic.latitude);
+        arr.addControl([lon, lat]);
+        console.log(cartesian)
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      handler.setInputAction(e => {
+        const ray = map.camera.getPickRay(e.endPosition);
+        const cartesian = map.scene.globe.pick(ray, viewer.scene);
+        if (arr.controls.length > 0) {
+          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+          const lon = Cesium.Math.toDegrees(cartographic.longitude);
+          const lat = Cesium.Math.toDegrees(cartographic.latitude);
+          arr.addControl([lon, lat]);
+          if (arr.controls.length > 1) {
+            arr.popControl();
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+      window.viewer = map;
+    </script>
+  </body>
+
+</html>
